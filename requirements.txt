@@ -6,3 +6,4 @@ django-cors-headers
 requests
 dj-database-url
 supabase
+whitenoise
