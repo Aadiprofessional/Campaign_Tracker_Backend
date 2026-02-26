@@ -28,7 +28,7 @@ def side_effect_mogrify(query, params=None):
     if params is None:
         return q_str.encode('utf-8')
     
-    # Simple interpolation for %s
+    # Basic interpolation
     try:
         quoted_params = []
         for p in params:
@@ -40,25 +40,21 @@ def side_effect_mogrify(query, params=None):
                 quoted_params.append(str(p))
         return (q_str % tuple(quoted_params)).encode('utf-8')
     except Exception:
-        # If interpolation fails, return query with placeholders (better than MagicMock)
+        # Fallback to raw query on failure
         return q_str.encode('utf-8')
 
 cursor_mock.mogrify.side_effect = side_effect_mogrify
 
-# Mock features
-# We need to ensure we don't trigger actual DB inspection
+# Mock DB features
 connection.features.has_native_uuid_field = True
 connection.features.supports_json_field = True
 connection.features.supports_timezones = True
-# Mock pg_version to a high number (e.g., 150000)
 type(connection).pg_version = PropertyMock(return_value=150000)
-
-# Also mock get_sequences which might be called
 connection.ops.get_sequences = MagicMock(return_value=[])
 
 from django.db.migrations.executor import MigrationExecutor
 
-# Use Executor to get the plan
+# Get migration plan
 executor = MigrationExecutor(connection)
 targets = executor.loader.graph.leaf_nodes()
 full_plan = executor.migration_plan(targets)
@@ -70,13 +66,10 @@ with open('schema.sql', 'w') as f:
         app_label = migration.app_label
         migration_name = migration.name
         
-        # print(f"Generating SQL for {app_label} {migration_name}...")
-        
         from io import StringIO
         out = StringIO()
         
         try:
-            # We call sqlmigrate directly
             call_command('sqlmigrate', app_label, migration_name, stdout=out)
             sql = out.getvalue()
             f.write(f"-- {app_label} {migration_name}\n")
