@@ -59,3 +59,6 @@ db.sqlite3-journal
 *.swp
 *.swo
 .DS_Store
+
+# Local API Reference
+api_reference_local.md

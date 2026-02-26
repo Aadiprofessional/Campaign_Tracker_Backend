@@ -104,6 +104,8 @@ This project uses Supabase (PostgreSQL) as the database. The backend connects di
 
 ## Deployment
 
+### Vercel (Recommended)
+
 This backend is configured for deployment on **Vercel**.
 
 1. **Push to GitHub**
@@ -125,6 +127,26 @@ This backend is configured for deployment on **Vercel**.
 
 4. **Deploy**
    Click "Deploy". Vercel will build and start your application.
+
+### Google Cloud Run (Alternative)
+
+This project includes a `Dockerfile` for containerized deployment on GCP Cloud Run.
+
+1. **Build the Docker image**
+   ```bash
+   docker build -t campaign-backend .
+   ```
+
+2. **Run locally (optional)**
+   ```bash
+   docker run -p 8080:8080 --env-file .env campaign-backend
+   ```
+
+3. **Deploy to Cloud Run**
+   - Push the image to Google Container Registry (GCR) or Artifact Registry.
+   - Create a Cloud Run service using the image.
+   - Set the required environment variables (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`).
+
 
 ## Testing
 
