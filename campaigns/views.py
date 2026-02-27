@@ -44,6 +44,8 @@ class CampaignViewSet(viewsets.ViewSet):
         data['end_date'] = data['end_date'].isoformat()
         data.setdefault('id', str(uuid.uuid4()))
         data.setdefault('created_at', datetime.now().isoformat())
+        data.setdefault('amount_spent', 0.0)
+        data.setdefault('status', 'Draft')
         
         supabase = get_supabase_client()
         response = supabase.table('campaigns_campaign').insert(data).execute()
@@ -118,7 +120,7 @@ class CampaignViewSet(viewsets.ViewSet):
                 records.append(record)
             
             # Upsert data (requires unique constraint on campaign_id, month)
-            response = supabase.table('campaigns_monthlyperformance').upsert(records).execute()
+            response = supabase.table('campaigns_monthlyperformance').upsert(records, on_conflict='campaign_id, month').execute()
             
             if response.data:
                 return Response(response.data)
