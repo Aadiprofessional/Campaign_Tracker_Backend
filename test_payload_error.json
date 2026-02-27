@@ -1,0 +1,10 @@
+[
+    {
+        "month": "2026-04-01",
+        "impressions": 100,
+        "clicks": 10,
+        "conversions": 1,
+        "spend": "abc",
+        "revenue": 50.0
+    }
+]
