@@ -96,35 +96,38 @@ class CampaignViewSet(viewsets.ViewSet):
             
             # Prepare data for upsert
             records = []
-            for item in data:
-                # Calculate ROI: ((Revenue - Spend) / Spend) * 100
-                spend = float(item.get('spend', 0))
-                revenue = float(item.get('revenue', 0))
-                roi = ((revenue - spend) / spend * 100) if spend > 0 else 0.0
-                
-                record = {
-                    'campaign_id': pk,
-                    'month': item.get('month'),
-                    'impressions': int(item.get('impressions', 0)),
-                    'clicks': int(item.get('clicks', 0)),
-                    'conversions': int(item.get('conversions', 0)),
-                    'spend': spend,
-                    'revenue': revenue,
-                    'roi': round(roi, 2)
-                }
-                
-                # If id exists, include it for update
-                if 'id' in item:
-                    record['id'] = item['id']
+            try:
+                for item in data:
+                    # Calculate ROI: ((Revenue - Spend) / Spend) * 100
+                    spend = float(item.get('spend', 0))
+                    revenue = float(item.get('revenue', 0))
+                    roi = ((revenue - spend) / spend * 100) if spend > 0 else 0.0
                     
-                records.append(record)
+                    record = {
+                        'campaign_id': pk,
+                        'month': item.get('month'),
+                        'impressions': int(item.get('impressions', 0)),
+                        'clicks': int(item.get('clicks', 0)),
+                        'conversions': int(item.get('conversions', 0)),
+                        'spend': spend,
+                        'revenue': revenue,
+                        'roi': round(roi, 2)
+                    }
+                    
+                    # If id exists, include it for update
+                    if 'id' in item:
+                        record['id'] = item['id']
+                        
+                    records.append(record)
             
-            # Upsert data (requires unique constraint on campaign_id, month)
-            response = supabase.table('campaigns_monthlyperformance').upsert(records, on_conflict='campaign_id, month').execute()
-            
-            if response.data:
-                return Response(response.data)
-            return Response({"error": "Failed to save performance data"}, status=status.HTTP_400_BAD_REQUEST)
+                # Upsert data (requires unique constraint on campaign_id, month)
+                response = supabase.table('campaigns_monthlyperformance').upsert(records, on_conflict='campaign_id, month').execute()
+                
+                if response.data:
+                    return Response(response.data)
+                return Response({"error": "Failed to save performance data", "details": "No data returned from Supabase"}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class DashboardStatsView(APIView):
     def get(self, request):
