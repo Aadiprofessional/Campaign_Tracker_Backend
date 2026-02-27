@@ -5,13 +5,13 @@ from .views import (
     InsightsTrendsView, NewsSearchAPIView
 )
 
-router = DefaultRouter()
+router = DefaultRouter(trailing_slash=False)
 router.register(r'campaigns', CampaignViewSet, basename='campaign')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('dashboard/stats/', DashboardStatsView.as_view(), name='dashboard-stats'),
-    path('dashboard/performance/', DashboardPerformanceView.as_view(), name='dashboard-performance'),
-    path('insights/trends/', InsightsTrendsView.as_view(), name='insights-trends'),
-    path('news/search/', NewsSearchAPIView.as_view(), name='news-search'),
+    path('dashboard/stats', DashboardStatsView.as_view(), name='dashboard-stats'),
+    path('dashboard/performance', DashboardPerformanceView.as_view(), name='dashboard-performance'),
+    path('insights/trends', InsightsTrendsView.as_view(), name='insights-trends'),
+    path('news/search', NewsSearchAPIView.as_view(), name='news-search'),
 ]

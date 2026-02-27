@@ -34,15 +34,15 @@ def api_root(request):
         <h2>Campaign Management</h2>
         
         <div class="endpoint">
-            <span class="method get">GET</span> <code>/api/campaigns/</code>
+            <span class="method get">GET</span> <code>/api/campaigns</code>
             <p>List all campaigns.</p>
         </div>
         
         <div class="endpoint">
-            <span class="method post">POST</span> <code>/api/campaigns/</code>
+            <span class="method post">POST</span> <code>/api/campaigns</code>
             <p>Create a new campaign.</p>
             <pre>
-curl -X POST https://campaign-tracker-backend-eight.vercel.app/api/campaigns/ \
+curl -X POST https://campaign-tracker-backend-eight.vercel.app/api/campaigns \
 -H "Content-Type: application/json" \
 -d '{
     "name": "Test Campaign",
@@ -56,36 +56,36 @@ curl -X POST https://campaign-tracker-backend-eight.vercel.app/api/campaigns/ \
         </div>
 
         <div class="endpoint">
-            <span class="method get">GET</span> <code>/api/campaigns/&lt;id&gt;/</code>
+            <span class="method get">GET</span> <code>/api/campaigns/&lt;id&gt;</code>
             <p>Retrieve a specific campaign.</p>
         </div>
 
         <div class="endpoint">
-            <span class="method patch">PATCH</span> <code>/api/campaigns/&lt;id&gt;/</code>
+            <span class="method patch">PATCH</span> <code>/api/campaigns/&lt;id&gt;</code>
             <p>Update a campaign.</p>
         </div>
 
         <div class="endpoint">
-            <span class="method delete">DELETE</span> <code>/api/campaigns/&lt;id&gt;/</code>
+            <span class="method delete">DELETE</span> <code>/api/campaigns/&lt;id&gt;</code>
             <p>Delete a campaign.</p>
         </div>
 
         <h2>Dashboard & Analytics</h2>
 
         <div class="endpoint">
-            <span class="method get">GET</span> <code>/api/dashboard/stats/</code>
+            <span class="method get">GET</span> <code>/api/dashboard/stats</code>
             <p>Get aggregated dashboard statistics.</p>
         </div>
 
         <div class="endpoint">
-            <span class="method get">GET</span> <code>/api/dashboard/performance/</code>
+            <span class="method get">GET</span> <code>/api/dashboard/performance</code>
             <p>Get monthly performance metrics for charts.</p>
         </div>
 
         <h2>Insights</h2>
 
         <div class="endpoint">
-            <span class="method get">GET</span> <code>/api/insights/trends/?query=marketing</code>
+            <span class="method get">GET</span> <code>/api/insights/trends?query=marketing</code>
             <p>Get trend analysis and related keywords.</p>
         </div>
     </body>
