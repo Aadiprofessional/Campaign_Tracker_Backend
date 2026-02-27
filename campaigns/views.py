@@ -59,13 +59,29 @@ class CampaignViewSet(viewsets.ViewSet):
         response = supabase.table('campaigns_campaign').select('*').eq('id', pk).execute()
         return Response(format_campaign(response.data[0])) if response.data else Response(status=status.HTTP_404_NOT_FOUND)
 
-    def update(self, request, pk=None):
+    def update(self, request, pk=None, partial=False):
+        serializer = CampaignSerializer(data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        data = serializer.validated_data
+        
+        # Convert date/datetime/UUID objects to strings for JSON serialization
+        for key, value in data.items():
+            if isinstance(value, (date, datetime)):
+                data[key] = value.isoformat()
+            if isinstance(value, uuid.UUID):
+                data[key] = str(value)
+                
         supabase = get_supabase_client()
-        response = supabase.table('campaigns_campaign').update(request.data).eq('id', pk).execute()
-        return Response(format_campaign(response.data[0])) if response.data else Response(status=status.HTTP_404_NOT_FOUND)
+        try:
+            response = supabase.table('campaigns_campaign').update(data).eq('id', pk).execute()
+            return Response(format_campaign(response.data[0])) if response.data else Response(status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def partial_update(self, request, pk=None):
-        return self.update(request, pk)
+        return self.update(request, pk, partial=True)
 
     def destroy(self, request, pk=None):
         get_supabase_client().table('campaigns_campaign').delete().eq('id', pk).execute()
