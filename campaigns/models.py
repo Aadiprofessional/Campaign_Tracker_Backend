@@ -39,5 +39,28 @@ class Campaign(models.Model):
     roi = models.FloatField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+class MonthlyPerformance(models.Model):
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='monthly_performances')
+    month = models.DateField()
+    impressions = models.IntegerField(default=0)
+    clicks = models.IntegerField(default=0)
+    conversions = models.IntegerField(default=0)
+    spend = models.FloatField(default=0.0)
+    revenue = models.FloatField(default=0.0)
+    roi = models.FloatField(default=0.0)
+
+    class Meta:
+        unique_together = ('campaign', 'month')
+        indexes = [
+            models.Index(fields=['campaign']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.spend > 0:
+            self.roi = ((self.revenue - self.spend) / self.spend) * 100
+        else:
+            self.roi = 0.0
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return self.name
+        return f"{self.campaign.name} - {self.month}"

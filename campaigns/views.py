@@ -69,61 +69,122 @@ class CampaignViewSet(viewsets.ViewSet):
         get_supabase_client().table('campaigns_campaign').delete().eq('id', pk).execute()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=['get'])
-    def performance(self, request, pk=None):
+    @action(detail=True, methods=['get', 'put'], url_path='performance')
+    def performance_monthly(self, request, pk=None):
         supabase = get_supabase_client()
-        response = supabase.table('campaigns_campaign').select('*').eq('id', pk).execute()
         
-        if not response.data:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        if request.method == 'GET':
+            # Retrieve monthly performance data
+            response = supabase.table('campaigns_monthlyperformance')\
+                .select('*')\
+                .eq('campaign_id', pk)\
+                .order('month')\
+                .execute()
             
-        campaign = response.data[0]
-        start = datetime.fromisoformat(campaign['start_date']).date() if isinstance(campaign['start_date'], str) else campaign['start_date']
-        end = datetime.fromisoformat(campaign['end_date']).date() if isinstance(campaign['end_date'], str) else campaign['end_date']
-        end = end or date.today()
+            return Response(response.data)
+
+        elif request.method == 'PUT':
+            # Bulk update/save monthly performance data
+            data = request.data
+            if not isinstance(data, list):
+                return Response(
+                    {"error": "Expected a list of monthly performance records"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
-        data = []
-        current = start
-        for i in range(1, 11):
-            if current > end: break
-            impressions = random.randint(1000, 5000)
-            data.append({
-                "name": f"Week {i}",
-                "impressions": impressions,
-                "clicks": int(impressions * random.uniform(0.05, 0.15)),
-                "conversions": int(impressions * random.uniform(0.05, 0.15) * random.uniform(0.1, 0.3))
-            })
-            current += timedelta(days=7)
+            # Prepare data for upsert
+            records = []
+            for item in data:
+                # Calculate ROI: ((Revenue - Spend) / Spend) * 100
+                spend = float(item.get('spend', 0))
+                revenue = float(item.get('revenue', 0))
+                roi = ((revenue - spend) / spend * 100) if spend > 0 else 0.0
+                
+                record = {
+                    'campaign_id': pk,
+                    'month': item.get('month'),
+                    'impressions': int(item.get('impressions', 0)),
+                    'clicks': int(item.get('clicks', 0)),
+                    'conversions': int(item.get('conversions', 0)),
+                    'spend': spend,
+                    'revenue': revenue,
+                    'roi': round(roi, 2)
+                }
+                
+                # If id exists, include it for update
+                if 'id' in item:
+                    record['id'] = item['id']
+                    
+                records.append(record)
             
-        return Response(data)
+            # Upsert data (requires unique constraint on campaign_id, month)
+            response = supabase.table('campaigns_monthlyperformance').upsert(records).execute()
+            
+            if response.data:
+                return Response(response.data)
+            return Response({"error": "Failed to save performance data"}, status=status.HTTP_400_BAD_REQUEST)
 
 class DashboardStatsView(APIView):
     def get(self, request):
         supabase = get_supabase_client()
-        response = supabase.table('campaigns_campaign').select('status,budget,roi').execute()
-        campaigns = response.data
         
-        rois = [float(c.get('roi') or 0) for c in campaigns if c.get('roi') is not None]
+        # Fetch campaigns
+        campaigns_response = supabase.table('campaigns_campaign').select('status,budget').execute()
+        campaigns = campaigns_response.data
+        
+        # Fetch all monthly performance to calculate average ROI
+        perf_response = supabase.table('campaigns_monthlyperformance').select('roi').execute()
+        perfs = perf_response.data
+        
+        rois = [float(p.get('roi') or 0) for p in perfs]
+        avg_roi = sum(rois) / len(rois) if rois else 0
         
         return Response({
             "total_campaigns": len(campaigns),
             "active_campaigns": sum(1 for c in campaigns if c.get('status') == 'Active'),
             "total_budget": sum(float(c.get('budget', 0) or 0) for c in campaigns),
-            "avg_roi": round(sum(rois) / len(rois), 2) if rois else 0
+            "avg_roi": round(avg_roi, 2)
         })
 
 class DashboardPerformanceView(APIView):
     def get(self, request):
-        data = []
-        for month in ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]:
-            impressions = random.randint(3000, 8000)
-            data.append({
-                "name": month,
-                "impressions": impressions,
-                "clicks": int(impressions * random.uniform(0.05, 0.15)),
-                "conversions": int(impressions * random.uniform(0.05, 0.15) * random.uniform(0.1, 0.3))
-            })
-        return Response(data)
+        supabase = get_supabase_client()
+        
+        # Fetch aggregated monthly performance
+        # Since we can't do complex aggregation easily via simple Supabase client calls without RPC,
+        # we'll fetch all data and aggregate in Python (acceptable for MVP/small scale)
+        response = supabase.table('campaigns_monthlyperformance').select('*').execute()
+        data = response.data
+        
+        # Aggregate by month
+        aggregated = {}
+        for item in data:
+            month = item['month']
+            # Convert date string YYYY-MM-DD to Month Name (e.g., "Jan") or keep as YYYY-MM
+            # For this chart, let's keep it simple or format as needed. 
+            # User example showed "2026-02", "2026-03".
+            
+            if month not in aggregated:
+                aggregated[month] = {
+                    "name": month,
+                    "impressions": 0,
+                    "clicks": 0,
+                    "conversions": 0,
+                    "spend": 0.0,
+                    "revenue": 0.0
+                }
+            
+            aggregated[month]["impressions"] += item.get('impressions', 0)
+            aggregated[month]["clicks"] += item.get('clicks', 0)
+            aggregated[month]["conversions"] += item.get('conversions', 0)
+            aggregated[month]["spend"] += float(item.get('spend', 0.0))
+            aggregated[month]["revenue"] += float(item.get('revenue', 0.0))
+            
+        # Convert to list and sort by date
+        result = list(aggregated.values())
+        result.sort(key=lambda x: x['name'])
+        
+        return Response(result)
 
 class InsightsTrendsView(APIView):
     def get(self, request):
